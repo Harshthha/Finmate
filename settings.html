@@ -18,21 +18,25 @@
 
 <body>
 
-<nav class="navbar navbar-dark bg-dark p-3 d-flex justify-content-between">
-  <h3 class="text-white m-0">⚙️ Settings</h3>
+<nav class="navbar p-3 shadow-sm" style="background:#ffffff; border-bottom:1px solid #eee;">
+  <div class="container d-flex justify-content-between align-items-center">
 
-  <button class="btn btn-light" onclick="window.location='index.html'">
-    ← Back
-  </button>
+    <h3 class="m-0 fw-bold" style="color:#222;">⚙️ Settings</h3>
+
+    <button class="btn btn-outline-secondary" onclick="window.location='index.html'">
+      ← Back to Dashboard
+    </button>
+
+  </div>
 </nav>
 
 <div class="container mt-4">
 
   <div class="card p-4">
 
-    <h4>Monthly Budget Settings</h4>
-    <p class="text-light">
-      Set your monthly allowance & saving goals. You can edit anytime within the same month.
+    <h4 class="fw-bold mb-1">Monthly Budget Settings</h4>
+    <p class="text-secondary">
+      Set your monthly allowance and savings goal. You can update it anytime within the same month.
     </p>
 
     <div id="settingsView">
@@ -75,13 +79,13 @@ async function loadSettings(uid){
   if(!doc.exists){
 
     box.innerHTML = `
-      <label class="mt-2">Monthly Pocket Money</label>
-      <input id="budgetInput" type="number" class="form-control">
+      <label class="mt-2 text-secondary fw-semibold">Monthly Pocket Money</label>
+      <input id="budgetInput" type="number" class="form-control form-control-lg">
 
-      <label class="mt-2">Target Savings</label>
-      <input id="savingInput" type="number" class="form-control">
+      <label class="mt-2 text-secondary fw-semibold">Target Savings</label>
+      <input id="savingInput" type="number" class="form-control form-control-lg">
 
-      <button class="btn btn-success mt-3" onclick="saveSettings()">
+      <button class="btn btn-success rounded-pill px-4 mt-3" onclick="saveSettings()">
         Save Settings
       </button>
     `;
@@ -97,8 +101,8 @@ async function loadSettings(uid){
       <p><b>Monthly Budget:</b> ₹${data.budget}</p>
       <p><b>Target Savings:</b> ₹${data.saving}</p>
 
-      <button class="btn btn-primary" onclick="editSettings()">
-        Edit
+      <button class="btn btn-outline-primary rounded-pill px-4" onclick="editSettings()">
+        Edit Settings
       </button>
     `;
   }
@@ -133,14 +137,14 @@ async function editSettings(){
   const data = doc.data();
 
   document.getElementById("settingsView").innerHTML = `
-      <label class="mt-2">Monthly Pocket Money</label>
-      <input id="budgetInput" type="number" value="${data.budget}" class="form-control">
+      <label class="mt-2 text-secondary fw-semibold">Monthly Pocket Money</label>
+      <input id="budgetInput" type="number" value="${data.budget}" class="form-control form-control-lg">
 
-      <label class="mt-2">Target Savings</label>
-      <input id="savingInput" type="number" value="${data.saving}" class="form-control">
+      <label class="mt-2 text-secondary fw-semibold">Target Savings</label>
+      <input id="savingInput" type="number" value="${data.saving}" class="form-control form-control-lg">
 
-      <button class="btn btn-success mt-3" onclick="saveSettings()">
-        Update
+      <button class="btn btn-success rounded-pill px-4 mt-3" onclick="saveSettings()">
+        Update Settings
       </button>
   `;
 }

@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>FinMate AI Analyst</title>
+
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+
+<script src="firebaseConfig.js"></script>
+<script src="geminiConfig.js"></script>
+
+</head>
+<body>
+
+<nav class="navbar shadow-sm" style="background:#fff; border-bottom:1px solid #eee;">
+  <div class="container-fluid d-flex align-items-center w-100">
+
+    <h3 class="m-0 fw-bold">🤖 FinMate AI</h3>
+
+    <div class="ms-auto">
+      <button class="btn btn-outline-secondary" onclick="window.location='index.html'">
+        ← Back
+      </button>
+    </div>
+  </div>
+</nav>
+
+<div class="container mt-4 page-wrapper">
+
+  <div class="card p-3">
+    <h5 class="fw-bold">AI Financial Analysis</h5>
+    <p class="text-secondary">Understanding your money behaviour…</p>
+
+    <div id="analysisBox" class="mt-2">Loading analysis...</div>
+  </div>
+
+  <div class="card p-3 mt-3">
+    <h5 class="fw-bold">Chat with FinMate AI</h5>
+
+    <div id="chatBox" style="height:300px; overflow-y:auto; border:1px solid #eee; border-radius:10px; padding:10px;">
+    </div>
+
+    <div class="d-flex mt-3">
+      <input id="userMsg" class="form-control" placeholder="Ask anything about your finances…">
+      <button class="btn btn-dark ms-2" onclick="sendMessage()">Send</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const app = firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+
+let budget = 0, totalExpense = 0, totalSub = 0, savings = 0;
+
+auth.onAuthStateChanged(async user => {
+  if(!user){
+    alert("Login first");
+    window.location = "index.html";
+    return;
+  }
+
+  await loadData(user.uid);
+  generateAIAnalysis();
+});
+async function loadData(uid){
+  // budget
+  const monthKey = new Date().getFullYear() + "-" + (new Date().getMonth()+1);
+  const settings = await db.collection("users")
+    .doc(uid).collection("settings").doc(monthKey).get();
+
+  budget = settings.exists ? settings.data().budget : 0;
+
+  // expenses
+  totalExpense = 0;
+  let allExpenses = [];
+  const expSnap = await db.collection("users")
+    .doc(uid).collection("expenses").get();
+
+  expSnap.forEach(d => {
+    const e = d.data();
+    allExpenses.push(e);
+    totalExpense += Number(e.amount);
+  });
+
+  // subs
+  totalSub = 0;
+  let allSubs = [];
+  const subSnap = await db.collection("users")
+    .doc(uid).collection("subs").get();
+
+  subSnap.forEach(d => {
+    const s = d.data();
+    allSubs.push(s);
+    totalSub += Number(s.amount);
+  });
+
+  savings = budget - (totalExpense + totalSub);
+
+  // store full lists globally for AI
+  window.AI_FULL_EXPENSE_LIST = allExpenses;
+  window.AI_FULL_SUB_LIST = allSubs;
+}
+
+async function generateAIAnalysis(){
+
+  // build a text list of all expenses
+  let expenseDetailText = "";
+  (window.AI_FULL_EXPENSE_LIST || []).forEach(e=>{
+    expenseDetailText += `• ${e.name} | ₹${e.amount} | Category: ${e.category} | Type: ${e.type}\n`;
+  });
+
+  // build a text list of all subs
+  let subDetailText = "";
+  (window.AI_FULL_SUB_LIST || []).forEach(s=>{
+    subDetailText += `• ${s.name} | ₹${s.amount} | Category: ${s.subCategory} | Type: ${s.type}\n`;
+  });
+
+  const prompt = `
+You are FinMate AI — a professional yet friendly personal finance analyst.
+Analyze the user’s current month financial behaviour deeply using REAL data provided.
+
+High level summary:
+Budget: ₹${budget}
+Total Expenses: ₹${totalExpense}
+Total Subscriptions: ₹${totalSub}
+Remaining Balance: ₹${savings}
+
+Detailed expenses list:
+${expenseDetailText || "(no expenses added)"}
+
+Detailed subscriptions list:
+${subDetailText || "(no subscriptions added)"}
+
+Now analyze and return:
+1️⃣ Financial Health Summary (clear & honest)
+2️⃣ Spending Behaviour Insights
+3️⃣ Category-wise highlights (Food, Shopping, Travel, Rent, etc.)
+4️⃣ Subscription Health & Warnings
+5️⃣ Risk Level (Low / Medium / High with reason)
+6️⃣ Action Plan (very practical steps)
+7️⃣ One motivational line at the end
+
+Use emojis lightly but stay professional.
+`;
+
+  const payload = {
+    contents:[{
+      role:"user",
+      parts:[{ text: prompt }]
+    }]
+  };
+
+  try{
+    const res = await fetch(
+      "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + GEMINI_API_KEY,
+      {
+        method:"POST",
+        headers:{ "Content-Type":"application/json" },
+        body:JSON.stringify(payload)
+      }
+    );
+
+    const data = await res.json();
+    console.log("AI Analysis Response:", data);
+
+    let aiText = "Couldn't analyze right now 😅";
+
+    if (data?.candidates?.length > 0 &&
+        data.candidates[0]?.content?.parts?.length > 0 &&
+        data.candidates[0].content.parts[0]?.text) {
+      aiText = data.candidates[0].content.parts[0].text;
+    } 
+    else if (data?.promptFeedback?.blockReason) {
+      aiText = "⚠️ AI blocked response due to safety: " + data.promptFeedback.blockReason;
+    }
+
+    document.getElementById("analysisBox").innerHTML =
+      aiText.replace(/\n/g,"<br>");
+  }
+  catch(e){
+    console.log(e);
+    document.getElementById("analysisBox").innerHTML =
+      "⚠️ AI Analysis failed. Please try again.";
+  }
+}
+// ---------- REAL GEMINI CHAT ----------
+async function sendMessage(){
+  const msg = userMsg.value.trim();
+  if(!msg) return;
+
+  addChat("You", msg);
+  userMsg.value = "";
+
+  addChat("FinMate AI","Thinking...");
+
+// build a text list for AI
+let expenseDetailText = "";
+AI_FULL_EXPENSE_LIST.forEach(e=>{
+  expenseDetailText += `• ${e.name} | ₹${e.amount} | Category: ${e.category} | Type: ${e.type}\n`;
+});
+let subDetailText = "";
+AI_FULL_SUB_LIST.forEach(s=>{
+  subDetailText += `• ${s.name} | ₹${s.amount} | Category: ${s.subCategory} | Type: ${s.type}\n`;
+});
+
+const chatPrompt = `
+You are FinMate AI — an empathetic but logical financial advisor.
+Here is the user’s spending data:
+
+Budget: ₹${budget}
+Remaining: ₹${savings}
+
+Itemized expenses:
+${expenseDetailText || "(none)"}
+
+Subscriptions:
+${subDetailText || "(none)"}
+
+User Question: ${msg}
+
+Answer conversationally but precisely, using the provided data.
+`;
+
+  const payload = {
+    contents:[{
+      role:"user",
+      parts:[{ text: chatPrompt }]
+    }]
+  };
+
+  try{
+    const res = await fetch(
+      "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + GEMINI_API_KEY,
+      {
+        method:"POST",
+        headers:{ "Content-Type":"application/json" },
+        body:JSON.stringify(payload)
+      }
+    );
+
+    const data = await res.json();
+    console.log("Chat Response:", data);
+
+    let reply = "Sorry, I couldn't think 😅";
+
+    if (data?.candidates?.length > 0 &&
+        data.candidates[0]?.content?.parts?.length > 0 &&
+        data.candidates[0].content.parts[0]?.text) {
+      reply = data.candidates[0].content.parts[0].text;
+    } else if (data?.promptFeedback?.blockReason) {
+      reply = "⚠️ Response blocked by safety: " + data.promptFeedback.blockReason;
+    }
+
+    document.getElementById("chatBox").lastElementChild.innerHTML =
+      `<b>FinMate AI:</b> ${reply}`;
+  }
+  catch(e){
+    document.getElementById("chatBox").lastElementChild.innerHTML =
+      `<b>FinMate AI:</b> Connection failed. Try again.`;
+  }
+}
+
+function addChat(sender,msg){
+  chatBox.innerHTML += `<p><b>${sender}:</b> ${msg}</p>`;
+  chatBox.scrollTop = chatBox.scrollHeight;
+}
+
+</script>
+
+</body>
+</html>

@@ -14,23 +14,30 @@
 <body>
 
 <!-- Navbar -->
-<nav class="navbar navbar-dark bg-dark p-3 d-flex justify-content-between align-items-center">
-  
-  <h3 class="text-white m-0">💰 FinMate</h3>
+<nav class="navbar shadow-sm" style="background:#ffffff; border-bottom:1px solid #eee;">
+  <div class="container-fluid d-flex align-items-center w-100">
 
-  <div>
-    <button class="btn btn-info me-2" onclick="window.location='charts.html'">
-      View Analytics & Insights 📊
-    </button>
-<button class="btn btn-warning" onclick="window.location='settings.html'">
-  ⚙️ 
+    <h3 class="m-0 fw-bold" style="color:#222;">💰 FinMate</h3>
+
+    <div class="ms-auto d-flex align-items-center">
+      <button class="btn btn-outline-primary me-2" onclick="window.location='charts.html'">
+        📊 Insights
+      </button>
+
+      <button class="btn btn-outline-secondary me-2" onclick="window.location='settings.html'">
+        ⚙️ Settings
+      </button>
+<button class="btn btn-outline-dark me-2" onclick="window.location='ai.html'">
+  🤖 AI Analyst
 </button>
-    <button class="btn btn-outline-light" onclick="logout()">
-      Logout
-    </button>
-  </div>
+      <button class="btn btn-danger" onclick="logout()">
+        Logout
+      </button>
+    </div>
 
+  </div>
 </nav>
+<div class="container mt-4">
 
   <!-- LOADING SCREEN -->
   <div id="loading" class="text-center">
@@ -51,53 +58,53 @@
   <!-- APP SECTION -->
   <div id="appSection" style="display:none;">
 
-    <div class="d-flex justify-content-between align-items-center">
-      <h2 class="fw-bold">FinMate Dashboard</h2>
-      <button class="btn btn-danger" onclick="logout()">Logout</button>
-    </div>
-
-    <div class="d-flex justify-content-between align-items-center mt-4">
-      <h4>Manage Your Spending</h4>
+    <div class="mt-4">
+      <h2 class="fw-bold">Dashboard</h2>
+      <p class="text-secondary mt-1">Track your spending, subscriptions and stay financially in control.</p>
     </div>
 
     <!-- Buttons -->
-    <div class="mt-3">
-      <button class="btn btn-primary" onclick="toggleExpense()">Add Expense</button>
-      <button class="btn btn-success" onclick="toggleSub()">Add Subscription</button>
+    <div class="d-flex justify-content-start gap-3 mt-3">
+      <button class="btn btn-primary rounded-pill px-4 py-2" onclick="toggleExpense()">
+        ➕ Add Expense
+      </button>
+
+      <button class="btn btn-success rounded-pill px-4 py-2" onclick="toggleSub()">
+        ➕ Add Subscription
+      </button>
     </div>
 
     <!-- SUMMARY CARDS -->
-    <div class="row text-center mt-3">
+    <div class="row g-3 mt-3">
 
-      <div class="col-md-4">
-        <div class="card p-3">
+      <div class="col-6 col-md-3">
+        <div class="card p-3 text-center">
           <h6>Total Expenses</h6>
           <h2 id="totalExpense">₹0</h2>
         </div>
       </div>
 
-      <div class="col-md-4">
-        <div class="card p-3">
+      <div class="col-6 col-md-3">
+        <div class="card p-3 text-center">
           <h6>Total Subscriptions</h6>
           <h2 id="totalSubs">₹0</h2>
         </div>
       </div>
 
-      <div class="col-md-4">
-        <div class="card p-3">
+      <div class="col-6 col-md-3">
+        <div class="card p-3 text-center">
           <h6>Upcoming Renewals</h6>
           <h2 id="renewalsCount">0</h2>
         </div>
       </div>
 
-    </div>
-    <div class="row text-center mt-3">
-      <div class="col-md-4">
-        <div class="card p-3">
+      <div class="col-6 col-md-3">
+        <div class="card p-3 text-center">
           <h6>Remaining Balance</h6>
           <h2 id="remainingMoney">₹0</h2>
         </div>
       </div>
+
     </div>
 
 
@@ -195,7 +202,7 @@
 
   </div>
 
-</div>
+</div><!-- container -->
 
 
 <!-- Firebase Compat SDK -->
