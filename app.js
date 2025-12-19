@@ -7,16 +7,26 @@ auth.onAuthStateChanged(user => {
   const loader = document.getElementById("loading");
   if (loader) loader.style.display = "none";
 
+  const navbar = document.getElementById("mainNavbar");
+
   if (user) {
     console.log("Logged in:", user.email);
+
     document.getElementById("authSection").style.display = "none";
     document.getElementById("appSection").style.display = "block";
+
+    if (navbar) navbar.style.display = "flex";
+
     loadData();
+    loadNotifications();
   } 
   else {
     console.log("User logged out");
+
     document.getElementById("authSection").style.display = "block";
     document.getElementById("appSection").style.display = "none";
+
+    if (navbar) navbar.style.display = "none";
   }
 });
 
@@ -230,6 +240,57 @@ subSnap.forEach(d => subs.push({ id: d.id, ...d.data() }));
   const adviceBox = document.getElementById("adviceText");
   if(adviceBox) adviceBox.innerText = advice;
 
+  // ---------- NOTIFICATION TRIGGERS ----------
+
+  // ---------- SMART NOTIFICATION TRIGGERS ----------
+
+// 1️⃣ Budget 80% Warning
+if(budget > 0 && totalSpent >= budget * 0.8){
+  createNotificationOnce(
+    "budget80",
+    "⚠️ You have crossed 80% of your monthly budget!"
+  );
+}
+
+// 2️⃣ Overspent Warning
+if(budget > 0 && totalSpent > budget){
+  createNotificationOnce(
+    "overBudget",
+    "❌ You overspent your budget this month. Slow down!"
+  );
+}
+
+// 3️⃣ Savings Breach
+if(budget > 0 && targetSaving > 0){
+  const allowableSpend = budget - targetSaving;
+  if(totalSpent > allowableSpend){
+    createNotificationOnce(
+      "savingsBreach",
+      "🚨 You are now using your savings money!"
+    );
+  }
+}
+
+// 4️⃣ Subscription Renewals (Tomorrow)
+subs.forEach(s=>{
+  const next = getNextMonthlyRenewal(s.startDate);
+  const days = daysLeft(next);
+
+  if(days === 1){
+    createNotificationOnce(
+      "renewal-" + s.name,
+      `📅 ${s.name} renews tomorrow`
+    );
+  }
+
+  if(days === 0){
+    createNotificationOnce(
+      "renewalToday-" + s.name,
+      `⚠️ ${s.name} renews today!`
+    );
+  }
+});
+
 
 
   // ---------- UPCOMING RENEWALS ----------
@@ -238,7 +299,13 @@ subSnap.forEach(d => subs.push({ id: d.id, ...d.data() }));
   subs.forEach(s=>{
     const next = getNextMonthlyRenewal(s.startDate);
     const days = daysLeft(next);
-    if(days >= 0 && days <= 7) upcoming++;
+    if(days >= 0 && days <= 7){
+      upcoming++;
+      createNotificationOnce(
+        `renewIn-${s.name}-${days}`,
+        `📅 ${s.name} renews in ${days} days`
+      );
+    }
   });
 
   document.getElementById("renewalsCount").innerText = upcoming;
@@ -319,4 +386,79 @@ function getExpiryDate(startDate, durationMonths){
   let d = new Date(startDate);
   d.setMonth(d.getMonth() + durationMonths);
   return d.toISOString().split("T")[0];
+}
+async function loadNotifications(){
+  const user = auth.currentUser;
+  if(!user) return;
+
+  const snap = await db.collection("users")
+    .doc(user.uid)
+    .collection("notifications")
+    .orderBy("createdAt","desc")
+    .get();
+
+  let html = "";
+  let count = 0;
+
+  snap.forEach(d=>{
+    count++;
+    const n = d.data();
+
+    html += `
+      <div class="alert alert-light border d-flex justify-content-between align-items-center">
+        <span>${n.message}</span>
+        <button class="btn btn-sm btn-outline-danger" onclick="deleteNotification('${d.id}')">
+          ✕
+        </button>
+      </div>
+    `;
+  });
+
+  notifList.innerHTML = html || `<p class='text-center text-muted'>No notifications 🎉</p>`;
+  notifBadge.innerText = count;
+  notifBadge.style.display = count ? "inline-block" : "none";
+}
+auth.onAuthStateChanged(user=>{
+  if(user){
+    loadData();
+    loadNotifications();
+  }
+});
+async function deleteNotification(id){
+  const user = auth.currentUser;
+  if(!user) return;
+
+  await db.collection("users")
+    .doc(user.uid)
+    .collection("notifications")
+    .doc(id)
+    .delete();
+
+  loadNotifications();
+}
+
+function getTodayKey(){
+  return new Date().toISOString().split("T")[0];
+}
+
+// Create notification only once per day per type
+async function createNotificationOnce(type, message){
+  const user = auth.currentUser;
+  if(!user) return;
+
+  const today = getTodayKey();
+  const notifId = `${type}_${today}`;   // 🔥 Fixed ID
+
+  await db.collection("users")
+    .doc(user.uid)
+    .collection("notifications")
+    .doc(notifId)
+    .set({
+      type,
+      message,
+      dateKey: today,
+      createdAt: new Date()
+    }, { merge: true });   // 🔥 overwrite instead of duplicate
+
+  loadNotifications();
 }
