@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>FinMate – Analytics Dashboard</title>
+
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<nav class="navbar navbar-dark bg-dark p-3">
+  <h3 class="text-white m-0">📊 FinMate Insights</h3>
+
+  <button class="btn btn-light" onclick="window.location='index.html'">
+    ← Back to Dashboard
+  </button>
+</nav>
+
+<div class="container mt-4">
+
+  <h4>Your Financial Health Overview</h4>
+  <p class="text-light">Visual breakdown of your spending and commitments</p>
+
+  <!-- Charts Grid -->
+  <div class="row mt-4">
+
+    <div class="col-md-6 mb-4">
+      <div class="card p-3">
+        <h6>Expense Categories</h6>
+        <canvas id="expenseChart"></canvas>
+      </div>
+    </div>
+
+    <div class="col-md-6 mb-4">
+      <div class="card p-3">
+        <h6>Subscriptions Breakdown</h6>
+        <canvas id="subsChart"></canvas>
+      </div>
+    </div>
+
+    <div class="col-md-6 mb-4">
+      <div class="card p-3">
+        <h6>Needs vs Wants</h6>
+        <canvas id="needsChart"></canvas>
+      </div>
+    </div>
+
+    <div class="col-md-6 mb-4">
+      <div class="card p-3">
+        <h6>Total Monthly Impact</h6>
+        <canvas id="totalChart"></canvas>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+
+<script src="firebaseConfig.js"></script>
+
+<script>
+
+const app = firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+
+auth.onAuthStateChanged(async user => {
+  if(!user){
+    alert("Login first");
+    window.location = "index.html";
+    return;
+  }
+
+  loadCharts(user.uid);
+});
+
+async function loadCharts(uid){
+
+  let expenses = [];
+  let subs = [];
+
+  const expSnap = await db.collection("users").doc(uid).collection("expenses").get();
+  expSnap.forEach(d=>expenses.push(d.data()));
+
+  const subSnap = await db.collection("users").doc(uid).collection("subs").get();
+  subSnap.forEach(d=>subs.push(d.data()));
+
+  renderCharts(expenses, subs);
+}
+
+function renderCharts(expenses, subs){
+
+  // ---------- EXPENSE CATEGORIES ----------
+  let categories = {Food:0, Shopping:0, Travel:0, Rent:0, Education:0, Other:0};
+
+  expenses.forEach(e=>{
+    categories[e.category || "Other"] += e.amount;
+  });
+
+  new Chart(document.getElementById("expenseChart"),{
+    type:"pie",
+    data:{
+      labels:Object.keys(categories),
+      datasets:[{
+        data:Object.values(categories),
+        backgroundColor:["#ff9f43","#ff6b81","#1dd1a1","#54a0ff","#c56cf0"]
+      }]
+    }
+  });
+
+
+  // ---------- SUBSCRIPTIONS ----------
+  let subsCat = {OTT:0, Education:0, Productivity:0, Fitness:0, Other:0};
+
+  subs.forEach(s=>{
+    subsCat[s.subCategory || "Other"] += s.amount;
+  });
+
+  new Chart(document.getElementById("subsChart"),{
+    type:"doughnut",
+    data:{
+      labels:Object.keys(subsCat),
+      datasets:[{
+        data:Object.values(subsCat),
+        backgroundColor:["#00b894","#0984e3","#e84393","#fdcb6e","#6c5ce7"]
+      }]
+    }
+  });
+
+
+  // ---------- NEEDS vs WANTS ----------
+  let needs = 0;
+  let wants = 0;
+
+  // expenses
+  expenses.forEach(e=>{
+    if(e.type === "Need") needs += e.amount;
+    else wants += e.amount;
+  });
+
+  // subscriptions
+  subs.forEach(s=>{
+    if(s.type === "Need") needs += s.amount;
+    else wants += s.amount;
+  });
+
+  new Chart(document.getElementById("needsChart"),{
+    type:"bar",
+    data:{
+      labels:["Needs","Wants"],
+      datasets:[{
+        data:[needs,wants],
+        borderWidth:1
+      }]
+    },
+    options:{scales:{y:{beginAtZero:true}}}
+  });
+
+
+  // ---------- TOTAL FINANCIAL LOAD ----------
+  const totalExp = expenses.reduce((a,b)=>a+b.amount,0);
+  const totalSub = subs.reduce((a,b)=>a+b.amount,0);
+
+  new Chart(document.getElementById("totalChart"),{
+    type:"bar",
+    data:{
+      labels:["Expenses","Subscriptions"],
+      datasets:[{
+        data:[totalExp,totalSub],
+        borderWidth:1
+      }]
+    },
+    options:{scales:{y:{beginAtZero:true}}}
+  });
+
+}
+
+</script>
+
+</body>
+</html>
