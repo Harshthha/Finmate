@@ -100,19 +100,6 @@ Stored per user in Firebase
 | Hosting | Firebase Hosting |
 | AI | Google Gemini API |
 
----
-
-## 📂 Project Structure
-
-FinMate/
-├── index.html
-├── charts.html
-├── settings.html
-├── ai.html
-├── style.css
-├── app.js
-├── firebaseConfig.js
-└── geminiConfig.js
 
 
 ---
