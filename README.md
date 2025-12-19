@@ -104,18 +104,16 @@ Stored per user in Firebase
 
 ## 📂 Project Structure
 
-📁 FinMate
-│
-├─ 🏠 index.html
-├─ 📊 charts.html
-├─ ⚙️ settings.html
-├─ 🤖 ai.html
-│
-├─ 🎨 style.css
-├─ 🧠 app.js
-│
-├─ 🔐 firebaseConfig.js
-└─ ✨ geminiConfig.js
+FinMate/
+├── index.html
+├── charts.html
+├── settings.html
+├── ai.html
+├── style.css
+├── app.js
+├── firebaseConfig.js
+└── geminiConfig.js
+
 
 ---
 
